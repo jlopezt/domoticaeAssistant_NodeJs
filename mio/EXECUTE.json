@@ -1,0 +1,56 @@
+*General
+{
+  "requestId": "6894439706274654516",
+  "payload": {
+    "commands": [
+      {
+        "ids": [
+          "123"
+        ],
+        "status": "SUCCESS",
+        "states": {
+          "online": true,
+          "thermostatMode": "cool",
+          "thermostatTemperatureSetpoint": 22,
+          "thermostatTemperatureAmbient": 25.1
+        }
+      }
+    ]
+  }
+}
+
+*action.devices.commands.ThermostatTemperatureSetpoint
+{
+  "command": "action.devices.commands.ThermostatTemperatureSetpoint",
+  "params": {
+    "thermostatTemperatureSetpoint": 22
+  }
+}
+
+*action.devices.commands.ThermostatSetMode
+{
+  "command": "action.devices.commands.ThermostatSetMode",
+  "params": {
+    "thermostatMode": "heatcool"
+  }
+}
+
+
+
+
+
+ERROR:
+{
+  "requestId": "ff36a3cc-ec34-11e6-b1a0-64510650abcf",
+  "payload": {
+    "commands": [
+      {
+        "ids": [
+          "456"
+        ],
+        "status": "ERROR",
+        "errorCode": "deviceTurnedOff"
+      }
+    ]
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "requestId": "6894439706274654512",
+  "payload": {
+    "agentUserId": "user123",
+    "devices": [
+      {
+        "id": "123",
+        "type": "action.devices.types.THERMOSTAT",
+        "traits": [
+          "action.devices.traits.TemperatureSetting"
+        ],
+        "name": {
+          "name": "calefaccion"
+        },
+        "willReportState": true,
+        "attributes": {
+          "availableThermostatModes": [
+            "off",
+            "auto",
+            "on"
+          ],
+          "thermostatTemperatureRange": {
+            "minThresholdCelsius": 0,
+            "maxThresholdCelsius": 100
+          },
+          "thermostatTemperatureUnit": "C",
+          "commandOnlyTemperatureSetting": false,
+          "queryOnlyTemperatureSetting": false
+        },
+        "deviceInfo": {
+          "manufacturer": "lopez-tola",
+          "model": "Termostatix",
+          "hwVersion": "1.0",
+          "swVersion": "2.5"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "requestId": "6894439706274654514",
+  "payload": {
+    "devices": {
+      "1": {
+        "status": "SUCCESS",
+        "online": true,
+        "thermostatMode": "auto",
+        "thermostatTemperatureSetpoint": 23,
+        "thermostatTemperatureAmbient": 25.1,
+        "thermostatHumidityAmbient": 45.3
+      }
+    }
+  }
+}
