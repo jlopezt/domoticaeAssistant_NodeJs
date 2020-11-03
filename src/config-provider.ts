@@ -37,7 +37,7 @@ process.argv.forEach((value) => {
 // Running server locally using ngrok
 export const useNgrok = ngrok
 
-export const googleCloudProjectId = 'abracadabra-2c873'
+//export const googleCloudProjectId = 'abracadabra-2c873'
 
 
 export const UNA_HORA = 3600;//60*60;

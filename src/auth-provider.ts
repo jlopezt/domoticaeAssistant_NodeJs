@@ -58,6 +58,7 @@ export async function getUserSecret(headers: Headers): Promise<string> {
  * @param expressApp Express app
  */
 export async function registerAuthEndpoints(expressApp: express.Express) {
+
   expressApp.get('/login', (request, response) => {
     console.log('Login GET -------------------------\nRequest.query:')
     console.log(request.query)
@@ -129,6 +130,14 @@ export async function registerAuthEndpoints(expressApp: express.Express) {
     return
   })
 
+  expressApp.get('/fakeauth', async (req, res) => {
+    const responseurl = util.format('%s?code=%s&state=%s',
+      decodeURIComponent(<string>req.query.redirect_uri), 'xxxxxx',
+      req.query.state)
+    console.log(`Set redirect as ${responseurl}`)
+    return res.redirect(`/login?responseurl=${encodeURIComponent(responseurl)}`)
+  })
+
   expressApp.get('/trueauth', async (request, response) => {
     console.log('trueAuth -------------------------\nSolicitado trueauth')
     console.log(request.query)   
@@ -138,12 +147,14 @@ export async function registerAuthEndpoints(expressApp: express.Express) {
 
       const uri_redireccion: string = decodeURIComponent(<string>request.query.redirect_uri)
       const responseurl = util.format('%s?code=%s&state=%s',
-          uri_redireccion, codigoAuth,//'xxxxxx',
+          uri_redireccion, 'xxxxxx',//codigoAuth,//'xxxxxx',
           request.query.state);
 
       console.log(`Set redirect as ${responseurl}-------------------------------------------`);
-      return response.redirect(
+      return response.redirect(responseurl);
+      /*return response.redirect(
           `/login?responseurl=${encodeURIComponent(responseurl)}`);
+          */
     }
 
     //Si el CLIENTE_ID no es correcto
@@ -156,6 +167,31 @@ export async function registerAuthEndpoints(expressApp: express.Express) {
         </body>
       </html>`
     );          
+  })
+
+  expressApp.all('/faketoken', async (req, res) => {
+    const grantType = req.query.grant_type
+      ? req.query.grant_type : req.body.grant_type
+    const secondsInDay = 86400 // 60 * 60 * 24
+    const HTTP_STATUS_OK = 200
+    console.log(`Grant type ${grantType}`)
+
+    let obj
+    if (grantType === 'authorization_code') {
+      obj = {
+        token_type: 'bearer',
+        access_token: '123access',
+        refresh_token: '123refresh',
+        expires_in: secondsInDay,
+      }
+    } else if (grantType === 'refresh_token') {
+      obj = {
+        token_type: 'bearer',
+        access_token: '123access',
+        expires_in: secondsInDay,
+      }
+    }
+    res.status(HTTP_STATUS_OK).json(obj)
   })
 
   expressApp.all('/truetoken', async (request, response) => {
