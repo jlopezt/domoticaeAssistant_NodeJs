@@ -23,10 +23,13 @@ import { Headers } from 'actions-on-google'
 
 import * as Config from './config-provider'
 
-export declare let accessToken : string
-export declare let refreshToken : string
-export declare let codigoLogin : string
-export declare let codigoAuth : string
+//import * as randomToken from 'random-token'
+var randomToken = require('random-token').create('abcdefghijklmnopqrstuvwxzyABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!"·$%&/()=-_.:,;><');
+
+let accessToken : string
+let refreshToken : string
+let codigoLogin : string
+let codigoAuth : string
 
 /**
  * A function that gets the user id from an access token.
@@ -201,18 +204,21 @@ export async function registerAuthEndpoints(expressApp: express.Express) {
     console.log('body:');
     console.log(request.body);
   
+    //Verificar que el USER_ID y el CLIENT_SECRET son correctos
     const grantType = request.query.grant_type ?
       request.query.grant_type : request.body.grant_type;
   
     console.log(`Grant type ${grantType}`);
-  
+
+    //accessToken = "Token de acceso";//crypto.randomBytes(256);
+    accessToken = randomToken(16)
+    console.log('accessToken: ' + accessToken);
+    //refreshToken = "Token de refresco";//crypto.randomBytes(256);
+    refreshToken = randomToken(16)
+    console.log('refreshToken: ' + refreshToken);
+
     let obj;  
     if (grantType === 'authorization_code') {
-      accessToken = "Token de acceso";//crypto.randomBytes(256);
-      console.log('accessToken: ' + accessToken);
-      refreshToken = "Token de refresco";//crypto.randomBytes(256);
-      console.log('refreshToken: ' + refreshToken);
-  
       obj = {
         token_type: 'bearer',
         access_token: accessToken,

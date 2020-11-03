@@ -1,0 +1,93 @@
+[
+  { 
+    "id": "Puerta",
+    "roomHint": "Garaje",
+    "type": "action.devices.types.DOOR",
+    "traits": [
+      "action.devices.traits.LockUnlock",
+      "action.devices.traits.OpenClose"
+      ],
+    "name": {
+      "name": "Puerta",
+      "defaultNames": [
+        "garaje",
+        "puerta garaje",
+        "puerta del garaje",
+        "cochera"
+        ],
+      "nicknames": ["puerta del garaje"]
+      },
+    "attributes": {
+      "discreteOnlyOpenClose": true,
+      "commandOnlyOpenClose": false,
+      "queryOnlyOpenClose": false
+      },
+    "willReportState": true,
+    "deviceInfo": {
+      "manufacturer": "lopez-tola",
+      "model": "Actuator",
+      "hwVersion": "1.0",
+      "swVersion": "4.3"
+      }
+  },
+  {
+    "id": "Termostato",
+    "type": "action.devices.types.THERMOSTAT",
+    "traits": [
+      "action.devices.traits.TemperatureSetting"
+      ],
+    "name": {
+      "name": "Termostato",
+      "defaultNames": [
+        "calefaccion",
+        "caldera",
+        "estufa"
+        ],
+      "nicknames": [
+        "Calefacción"
+        ]
+    },
+    "willReportState": true,
+    "roomHint": "Laboratorio",
+    "attributes": {
+      "availableThermostatModes": [
+        "heat",
+        "cool"
+        ],
+      "thermostatTemperatureRange": {
+        "minThresholdCelsius": "10",
+        "maxThresholdCelsius": "40"
+        },
+      "thermostatTemperatureUnit": "C",
+      "bufferRangeCelsius": 0.5,
+      "commandOnlyTemperatureSetting": false,
+      "queryOnlyTemperatureSetting": false
+    },
+    "deviceInfo": {
+      "manufacturer": "lopez-tola",
+      "model": "Termostatix",
+      "hwVersion": "1.0",
+      "swVersion": "2.5"
+    }
+  },
+  {
+    "id": "Enchufe",
+    "type": "action.devices.types.OUTLET",
+    "roomHint": "Laboratorio",
+    "traits": [
+      "action.devices.traits.OnOff"
+      ],
+    "name": {
+      "name": "Enchufe de prueba",
+      "defaultNames": ["led"],
+      "nicknames": ["led"]
+      },
+    "willReportState": true,
+    "deviceInfo": {
+      "manufacturer": "lopez-tola",
+      "model": "smartEnchufe",
+      "hwVersion": "1.0",
+      "swVersion": "2.5"
+      }
+  }
+]

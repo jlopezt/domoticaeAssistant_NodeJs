@@ -16,6 +16,7 @@
  * This is the main server code that processes requests and sends responses
  * back to users and to the HomeGraph.
  */
+'use strict';
 
 // Express imports
 import * as express from 'express'
@@ -26,22 +27,13 @@ import * as ngrok from 'ngrok'
 import { AddressInfo } from 'net'
 
 // Smart home imports
-import {
-  smarthome, 
-  //SmartHomeV1ExecuteResponse,
-  //SmartHomeV1ExecuteResponseCommands,
-  //Headers,
-} from 'actions-on-google'
-
+import {smarthome} from 'actions-on-google'
 import * as AoG from 'actions-on-google'
 
 // Local imports
 import * as Auth from './auth-provider'
 import * as Config from './config-provider'
-
-//Me lo he traido de FIREBASE
-//import { ApiClientObjectMap } from 'actions-on-google/dist/common'
-//type StatesMap = ApiClientObjectMap<any>
+import * as Fs from './files'
 
 const expressApp = express()
 expressApp.use(cors())
@@ -72,123 +64,74 @@ import * as https from 'https'
 var setPoint = 23;
 var modo = 'heat';
 var enchufe = false;
+var puertaAbierta=0;
+var puertaBloqueada=false;
 
 //Modificada para Termostatix
 app.onSync( (body) => {
   console.log('OnSync activado')
   //VALIDAR QUIEN LO PIDE Y QUE PIDE!!!
 
-  //return {
+  const devices_syn = Fs.getFile('./data/sync.json');
   const salida = {
     requestId: body.requestId,
     payload: {
       agentUserId: Config.USER_ID,
-      devices: [{
-        id: 'Termostato',
-        type: 'action.devices.types.THERMOSTAT',
-        traits: [
-          'action.devices.traits.TemperatureSetting'
-        ],
-        name: {
-          name: 'Termostato',
-          defaultNames: [
-            'calefaccion',
-            'caldera',
-            'estufa'
-          ],
-          nicknames: ['Calefacción']
-        },
-        willReportState: true,
-        roomHint: 'Laboratorio',
-        attributes: {
-          //availableThermostatModes: ['off','heat','on'],
-          availableThermostatModes: ["off", "heat", "cool", "on", "heatcool", "auto"],
-          thermostatTemperatureRange: {
-            minThresholdCelsius: '10',
-            maxThresholdCelsius: '40'
-          },
-          thermostatTemperatureUnit: 'C',
-          bufferRangeCelsius: 0.5,
-          commandOnlyTemperatureSetting: false,
-          queryOnlyTemperatureSetting: false
-        },
-        deviceInfo: {
-          manufacturer: 'lopez-tola',
-          model: 'Termostatix',
-          hwVersion: '1.0',
-          swVersion: '2.5'
-        },
-      },
-      {
-        id: "Enchufe",
-        type: "action.devices.types.OUTLET",
-        roomHint: 'Laboratorio',
-        traits: [
-          "action.devices.traits.OnOff"
-        ],
-        name: {
-          name: "Enchufe de prueba",
-          defaultNames: [],
-          nicknames: []
-        },
-        willReportState: true,
-        deviceInfo: {
-          manufacturer: 'lopez-tola',
-          model: 'smartEnchufe',
-          hwVersion: '1.0',
-          swVersion: '2.5'
-        },      
-      }],
-    },
-  };
-  console.log(salida);
-  
+      devices: devices_syn
+    }
+  }
+
+  console.log(salida);  
   return salida;
 })
 
 const queryDevice = async (deviceId : string) => {
-  console.log('queryDevice:' + deviceId);
+  console.log('queryDevice:' + deviceId + '------------------------------------------------');
   
   if(deviceId==='Termostato') {
     return {      
         status: "SUCCESS",
         online: true,
+        activeThermostatMode: modo,
         thermostatMode: modo,
         thermostatTemperatureSetpoint: setPoint,
         thermostatTemperatureAmbient: 25.1,
-        thermostatHumidityAmbient: 45.3
+        thermostatHumidityAmbient: 45.3,
       };
   }
   else if(deviceId==='Enchufe') {
     return {      
-        status: "SUCCESS",
-        online: true,
-        on: enchufe
-      };
-  }  
+      status: "SUCCESS",
+      online: true,
+      on: enchufe
+    };
+  }
+  else if(deviceId==='Puerta')  {
+    return {      
+      status: "SUCCESS",
+      online: true,
+      openPercent: puertaAbierta,
+      isLocked: puertaBloqueada,
+      isJammed: false      
+    }
+  }
   else {
-    return{
-    }; 
+    console.log('device ID no reconocido: ' + deviceId)
+    return{}; 
   }
 };
 
-/////////////////
 interface DeviceStatesMap {
   // tslint:disable-next-line
   [key: string]: any
 }
-/////////////////
 
 app.onQuery(async (body) => {
   console.log('OnQuery activado');
-  console.log(body);
+  //console.log(body);
 
   const {requestId} = body;
-//  const payload = {
-//    devices: {},
-//  };
-
-  const deviceStates: DeviceStatesMap = {}/////////////////
+  const deviceStates: DeviceStatesMap = {}
 
   const queryPromises = [];
   const intent = body.inputs[0];
@@ -199,21 +142,20 @@ app.onQuery(async (body) => {
         queryDevice(device.id)
             .then((data) => {
               // Add response to device payload
-              deviceStates[device.id] = data;/////////////////
-              //payload.devices[device.id] = data;
+              deviceStates[device.id] = data;
             }) );
   }
   // Wait for all promises to resolve
   await Promise.all(queryPromises);
   
-  const payload = {//////////
-    devices: deviceStates,//////////
-  };//////////
+  const payload = {
+    devices: deviceStates,
+  };
   const salida = {
     requestId: requestId,
     payload: payload,
   };
-  console.log(salida);
+  console.log(JSON.stringify(salida));
   return salida;
 });
 
@@ -250,7 +192,6 @@ const updateDevice = async (execution : AoG.SmartHomeV1ExecuteRequestExecution, 
       state = {thermostatMode: modo};
       break;
     case 'action.devices.commands.OnOff':
-      console.log('aqui hemos llegado');
       enchufe = params.on;
 
       if(params.on===true) {
@@ -269,9 +210,48 @@ const updateDevice = async (execution : AoG.SmartHomeV1ExecuteRequestExecution, 
       });
 
       state = {on: enchufe};
-      console.log('Y aqui!!!');
       break;
-    default:
+    case 'action.devices.commands.OpenClose':
+      puertaAbierta = params.openPercent;
+
+      if(puertaAbierta!=0) {
+        console.log('Pongo la url de encender');
+        url_accion = 'https://domoticae.lopeztola.com/bombilla/activaRele?id=0';
+      }
+      else {
+        console.log('Pongo la url de apagar');
+        url_accion = 'https://domoticae.lopeztola.com/bombilla/desactivaRele?id=0';
+      }
+      
+      console.log('se invocara: ' + url_accion);
+      
+      peticionHTTP(url_accion).then((salida)=>{
+        console.log('Codigo de salida: ' + salida);
+      });
+
+      state = {openPercent: (puertaAbierta>0?100:0)};
+      break;
+    case 'action.devices.commands.LockUnlock':
+      puertaBloqueada = params.Lock;
+
+      if(puertaBloqueada===true) {
+        console.log('Pongo la url de encender');
+        url_accion = 'https://domoticae.lopeztola.com/bombilla/activaRele?id=0';
+      }
+      else {
+        console.log('Pongo la url de apagar');
+        url_accion = 'https://domoticae.lopeztola.com/bombilla/desactivaRele?id=0';
+      }
+      
+      console.log('se invocara: ' + url_accion);
+      
+      peticionHTTP(url_accion).then((salida)=>{
+        console.log('Codigo de salida: ' + salida);
+      });
+
+      state = {isLocked: puertaBloqueada};
+    break;
+      default:
       console.log(`comando no encontrado ${command}`);
   }
 
@@ -327,57 +307,50 @@ app.onExecute(async (body) => {
 app.onDisconnect(async (body, headers) => {
   console.log('Se ha recibido DISCONNECT')
 })
-////////////////////////////////////////////////////////////////////FULFILLMENT///////////////////////////////////////////////////////////////
-
+////////////////////////////////////////////////////////////////////FIN - FULFILLMENT///////////////////////////////////////////////////////////////
 
 expressApp.post('/smarthome', app)
-/*
-expressApp.post('/smarthome/update', async (req, res) => {
-  console.log(req.body)
-  const {userId, deviceId, name, nickname, states, localDeviceId, errorCode, tfa} = req.body
-  try {
-    await Firestore.updateDevice(userId, deviceId, name, nickname, states, localDeviceId,
-      errorCode, tfa)
-    if (localDeviceId || localDeviceId === null) {
-      await app.requestSync(userId)
-    }
-    if (states !== undefined) {
-      const res = await reportState(userId, deviceId, states)
-      console.log('device state reported:', states, res)
-    }
-    res.status(200).send('OK')
+
+////////////////////////////////////////////////////////////////////LLAMADAS SALIENTE///////////////////////////////////////////////////////////////
+expressApp.all('/smarthome/resincroniza', async (req,res) => {
+  try{
+    await app.requestSync(Config.USER_ID)
+    res.status(200).send('Resincronizacion solicitada')
   } catch(e) {
     console.error(e)
-    res.status(400).send(`Error updating device: ${e}`)
-  }
+    res.status(200).send('Error en la resincronizacion')
+  } 
 })
 
-expressApp.post('/smarthome/create', async (req, res) => {
-  console.log(req.body)
-  const {userId, data} = req.body
-  try {
-    await Firestore.addDevice(userId, data)
-    await app.requestSync(userId)
+expressApp.all('/smarthome/reportaCambio', async (req,res) => {
+  const userId = Config.USER_ID
+  const deviceId = req.body.deviceId
+  const states = {} 
+  try{
+    await reportState(userId, deviceId, states)
+    res.status(200).send('Cambio enviado')
   } catch(e) {
     console.error(e)
-  } finally {
-    res.status(200).send('OK')
-  }
+    res.status(200).send('Error al enviar cambio')
+  } 
 })
+async function reportState(agentUserId: string, deviceId: string, states: object) {
+  console.log(`Reporting state payload for ${deviceId}`, states)
 
-expressApp.post('/smarthome/delete', async (req, res) => {
-  console.log(req.body)
-  const {userId, deviceId} = req.body
-  try {
-    await Firestore.deleteDevice(userId, deviceId)
-    await app.requestSync(userId)
-  } catch(e) {
-    console.error(e)
-  } finally {
-    res.status(200).send('OK')
-  }
-})
-*/
+  return await app.reportState({
+    agentUserId,
+    requestId: Math.random().toString(),
+    payload: {
+      devices: {
+        states: {
+          [deviceId]: states,
+        },
+      },
+    },
+  })
+}
+////////////////////////////////////////////////////////////////////FIN - LLAMADAS SALIENTE///////////////////////////////////////////////////////////////
+
 const appPort = process.env.PORT || Config.expressPort
 
 const expressServer = expressApp.listen(appPort, async () => {
