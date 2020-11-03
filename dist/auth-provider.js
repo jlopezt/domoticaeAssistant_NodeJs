@@ -109,8 +109,13 @@ function registerAuthEndpoints(expressApp) {
             console.log(request);
             if (request.query.cliente_id != Config.CLIENT_ID) {
                 exports.codigoAuth = "Codigo de Auth"; //crypto.randomBytes(32);
-                const responseurl = util.format('%s?code=%s&state=%s', decodeURIComponent(request.query.redirect_uri), exports.codigoAuth, //'xxxxxx',
+                const uri_redireccion = request.query.redirect_uri;
+                const responseurl = util.format('%s?code=%s&state=%s', decodeURIComponent(uri_redireccion), exports.codigoAuth, //'xxxxxx',
                 request.query.state);
+                /*      const responseurl = util.format('%s?code=%s&state=%s',
+                          decodeURIComponent(request.query.redirect_uri), codigoAuth,//'xxxxxx',
+                          request.query.state);
+                          */
                 console.log(`Set redirect as ${responseurl}`);
                 return response.redirect(`/login?responseurl=${encodeURIComponent(responseurl)}`);
             }

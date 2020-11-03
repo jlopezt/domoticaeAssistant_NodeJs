@@ -1,7 +1,7 @@
-node_modules/
-frontend/
 dist/
+node_modules/
 .vscode/
+mio/
 
 # service account keys
 #src/*.json

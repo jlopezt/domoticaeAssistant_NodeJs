@@ -231,6 +231,8 @@ const updateDevice = async (execution : AoG.SmartHomeV1ExecuteRequestExecution, 
   console.log(`deviceId : ${deviceId}`)
   
   const {params, command} = execution;
+  if(typeof params === 'undefined') return ''
+
   console.log(params);
   console.log('command: ' + command);
   let state; 
@@ -398,11 +400,11 @@ const expressServer = expressApp.listen(appPort, async () => {
 
       console.log('')
       console.log('In the console, set the Authorization URL to:')
-      console.log('    ' + url + '/fakeauth')
+      console.log('    ' + url + '/trueauth')
 
       console.log('')
       console.log('Then set the Token URL to:')
-      console.log('    ' + url + '/faketoken')
+      console.log('    ' + url + '/truetoken')
       console.log('')
 
       console.log('Finally press the \'TEST DRAFT\' button')

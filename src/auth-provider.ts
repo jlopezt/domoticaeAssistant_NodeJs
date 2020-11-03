@@ -23,16 +23,10 @@ import { Headers } from 'actions-on-google'
 
 import * as Config from './config-provider'
 
-/*
-export declare let accessToken = "Token de acceso";
-export declare let refreshToken = "Token de refresco";
-export declare let codigoLogin = "Codigo login";
-export declare let codigoAuth = "Codigo auth";
-*/
-export declare let accessToken : String
-export declare let refreshToken : String
-export declare let codigoLogin : String
-export declare let codigoAuth : String
+export declare let accessToken : string
+export declare let refreshToken : string
+export declare let codigoLogin : string
+export declare let codigoAuth : string
 
 /**
  * A function that gets the user id from an access token.
@@ -49,17 +43,27 @@ export async function getUser(headers: Headers): Promise<string> {
   */
   return Config.CLIENT_ID
 }
-
+export async function getUserSecret(headers: Headers): Promise<string> {
+  /*
+  const authorization = headers.authorization
+  const accessToken = (authorization as string).substr(7)
+  return await Firestore.getUserId(accessToken)
+  */
+  return Config.CLIENT_SECRET
+}
 /**
- * A function that adds /login, /fakeauth, /faketoken endpoints to an
+ * A function that adds /login, /trueauth, /truetoken endpoints to an
  * Express server. Replace this with your own OAuth endpoints.
  *
  * @param expressApp Express app
  */
 export async function registerAuthEndpoints(expressApp: express.Express) {
   expressApp.get('/login', (request, response) => {
-    if(request.query.code===codigoAuth) {
-      codigoLogin = "Codigo login";//crypto.randomBytes(32);
+    console.log('Login GET -------------------------\nRequest.query:')
+    console.log(request.query)
+
+    if(request.query.code==codigoAuth || true) {
+      codigoLogin = "Codigo_login";//crypto.randomBytes(32);
       console.log('(GET) Requesting login page');
       return response.send(`
       <!DOCTYPE html>
@@ -82,7 +86,7 @@ export async function registerAuthEndpoints(expressApp: express.Express) {
       </html>`
       );
     }
-
+/*
     //Si el codigo Auth no es valido...
     console.log('codigoAuth (' + request.query.code + ') no valido');
     return response.status(401).send(`
@@ -90,46 +94,54 @@ export async function registerAuthEndpoints(expressApp: express.Express) {
       <html>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <body>
-          <h1>Not Allowed</h1>
+          <h1>No permitido</h1>
         </body>
       </html>`
-    ); 
+    ); */
   })
 
   expressApp.post('/login', async (request, response) => {
     // Here, you should validate the user account.
-    // In this sample, we do not do that.
-    if(request.body.key==codigoLogin && request.body.login===Config.USER_ID && request.body.pass===Config.USER_PASSWORD) {
-      const responseurl = decodeURIComponent(request.body.responseurl);
-      console.log(`(POST) Redirect to ${responseurl}`);
-      return response.redirect(responseurl);
+    // In this sample, we do not do that.    
+    console.log('Login POST -------------------------\nbody = ')
+    //console.log(request)
+    console.log(request.body)
+
+    if(request.body.key!=codigoLogin || request.body.login!=Config.USER_ID || request.body.pass!=Config.USER_PASSWORD) {
+      //Si el usuario y password no son validos...
+      console.log('codigoLogin (' + request.body.key + '!= ' + codigoLogin + ') USER_ID (' + request.body.login + ') o USER_PASSWORD (' + request.body.pass + ') no valido');
+      const body= `
+      <!DOCTYPE html>
+      <html>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <body>
+        <h1>Mentiroso, no eres tu...</h1>
+        </body>
+      </html>`;
+
+      return response.status(401).send(body);
     }
     
-    //Si el usuario y password no son validos...
-    console.log('codigoLogin (' + request.body.key + '!= ' + codigoLogin + ') USER_ID (' + request.body.login + ') o USER_PASSWORD (' + request.body.pass + ') no valido');
-    const body= `
-    <!DOCTYPE html>
-    <html>
-      <meta name="viewport" content="width=device-width, initial-scale=1">
-      <body>
-      <h1>Mentiroso, no eres tu...</h1>
-      </body>
-    </html>`;
-
-    return response.status(401).send(body);
+    const responseurl = decodeURIComponent(<string>request.body.responseurl);
+    response.redirect(responseurl);
+    console.log(`(POST) Redirect to:\n${responseurl}\n-------------------------------------`);
+    //return response.redirect(responseurl);
+    return
   })
 
   expressApp.get('/trueauth', async (request, response) => {
-    console.log('Solicitado fakeauth')
-    console.log(request)
+    console.log('trueAuth -------------------------\nSolicitado trueauth')
+    console.log(request.query)   
   
-    if(request.query.cliente_id!=Config.CLIENT_ID) {
-      codigoAuth = "Codigo de Auth";//crypto.randomBytes(32);
-  
+    if(request.query.client_id!=Config.CLIENT_ID) {
+      codigoAuth = "Codigo_de_Auth";//crypto.randomBytes(32);
+
+      const uri_redireccion: string = decodeURIComponent(<string>request.query.redirect_uri)
       const responseurl = util.format('%s?code=%s&state=%s',
-          decodeURIComponent(request.query.redirect_uri), codigoAuth,//'xxxxxx',
+          uri_redireccion, codigoAuth,//'xxxxxx',
           request.query.state);
-      console.log(`Set redirect as ${responseurl}`);
+
+      console.log(`Set redirect as ${responseurl}-------------------------------------------`);
       return response.redirect(
           `/login?responseurl=${encodeURIComponent(responseurl)}`);
     }
@@ -147,8 +159,11 @@ export async function registerAuthEndpoints(expressApp: express.Express) {
   })
 
   expressApp.all('/truetoken', async (request, response) => {
-    console.log('Solicitado faketoken');
-    console.log(request);
+    console.log('trueToken -------------------------\nSolicitado token');
+    console.log('query:');
+    console.log(request.query);
+    console.log('body:');
+    console.log(request.body);
   
     const grantType = request.query.grant_type ?
       request.query.grant_type : request.body.grant_type;

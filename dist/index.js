@@ -206,7 +206,8 @@ const updateDevice = (execution, deviceId) => __awaiter(this, void 0, void 0, fu
     let url_accion;
     switch (command) {
         case 'action.devices.commands.ThermostatTemperatureSetpoint':
-            setPoint = params.thermostatTemperatureSetpoint;
+            if (params.hasOwnProperty('thermostatTemperatureSetpoint'))
+                setPoint = params.thermostatTemperatureSetpoint;
             state = { thermostatTemperatureSetpoint: setPoint };
             break;
         case 'action.devices.commands.ThermostatSetMode':
