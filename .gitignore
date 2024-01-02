@@ -1,10 +1,13 @@
 dist/*
 node_modules/*
 .vscode/
+credenciales/*
 
 # service account keys
 #src/*.json
 .firebaserc
+src/smart-home-key.json
+dist/smart-home-key.json
 dist/auth-provider.d.ts
 dist/auth-provider.js
 dist/auth-provider.js.map

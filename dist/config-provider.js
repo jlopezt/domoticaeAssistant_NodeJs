@@ -32,5 +32,13 @@ process.argv.forEach((value) => {
 });
 // Running server locally using ngrok
 exports.useNgrok = ngrok;
-exports.googleCloudProjectId = 'abracadabra-2c873';
+//export const googleCloudProjectId = 'abracadabra-2c873'
+exports.UNA_HORA = 3600; //60*60;
+exports.UN_DIA = 86400; //24*60*60;
+exports.USER_ID = 'user@login.com';
+exports.USER_PASSWORD = '1234';
+exports.CLIENT_SECRET = 'DEF456';
+exports.HTTP_STATUS_OK = 200;
+exports.HTTP_STATUS_NOT_FOUND = 404;
+exports.HTTP_STATUS_NOT_ALLOWED = 401;
 //# sourceMappingURL=config-provider.js.map

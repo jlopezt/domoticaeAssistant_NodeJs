@@ -46,7 +46,7 @@ Auth.registerAuthEndpoints(expressApp)
 
 let jwt
 try {
-  jwt = require('./smart-home-key.json')
+  jwt = require('../credenciales/smart-home-key.json')
 } catch (e) {
   console.warn('Service account key is not found')
   console.warn('Report state and Request sync will be unavailable')

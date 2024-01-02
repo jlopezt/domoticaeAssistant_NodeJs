@@ -4,10 +4,6 @@
  */
 import * as express from 'express';
 import { Headers } from 'actions-on-google';
-export declare let accessToken: String;
-export declare let refreshToken: String;
-export declare let codigoLogin: String;
-export declare let codigoAuth: String;
 /**
  * A function that gets the user id from an access token.
  * Replace this functionality with your own OAuth provider.
@@ -16,8 +12,9 @@ export declare let codigoAuth: String;
  * @return The user id
  */
 export declare function getUser(headers: Headers): Promise<string>;
+export declare function getUserSecret(headers: Headers): Promise<string>;
 /**
- * A function that adds /login, /fakeauth, /faketoken endpoints to an
+ * A function that adds /login, /trueauth, /truetoken endpoints to an
  * Express server. Replace this with your own OAuth endpoints.
  *
  * @param expressApp Express app

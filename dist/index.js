@@ -1,4 +1,3 @@
-"use strict";
 /* Copyright 2017, Google, Inc.
  * Licensed under the Apache License, Version 2.0 (the 'License');
  * you may not use this file except in compliance with the License.
@@ -12,6 +11,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/**
+ * This is the main server code that processes requests and sends responses
+ * back to users and to the HomeGraph.
+ */
+'use strict';
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -21,10 +25,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-/**
- * This is the main server code that processes requests and sends responses
- * back to users and to the HomeGraph.
- */
 // Express imports
 const express = require("express");
 const bodyParser = require("body-parser");
@@ -36,9 +36,7 @@ const actions_on_google_1 = require("actions-on-google");
 // Local imports
 const Auth = require("./auth-provider");
 const Config = require("./config-provider");
-//Me lo he traido de FIREBASE
-//import { ApiClientObjectMap } from 'actions-on-google/dist/common'
-//type StatesMap = ApiClientObjectMap<any>
+const Fs = require("./files");
 const expressApp = express();
 expressApp.use(cors());
 expressApp.use(morgan('dev'));
@@ -48,7 +46,7 @@ expressApp.set('trust proxy', 1);
 Auth.registerAuthEndpoints(expressApp);
 let jwt;
 try {
-    jwt = require('./smart-home-key.json');
+    jwt = require('../credenciales/smart-home-key.json');
 }
 catch (e) {
     console.warn('Service account key is not found');
@@ -64,86 +62,34 @@ const https = require("https");
 var setPoint = 23;
 var modo = 'heat';
 var enchufe = false;
+var puertaAbierta = 0;
+var puertaBloqueada = false;
 //Modificada para Termostatix
 app.onSync((body) => {
     console.log('OnSync activado');
     //VALIDAR QUIEN LO PIDE Y QUE PIDE!!!
-    //return {
+    const devices_syn = Fs.getFile('./data/sync.json');
     const salida = {
         requestId: body.requestId,
         payload: {
             agentUserId: Config.USER_ID,
-            devices: [{
-                    id: 'Termostato',
-                    type: 'action.devices.types.THERMOSTAT',
-                    traits: [
-                        'action.devices.traits.TemperatureSetting'
-                    ],
-                    name: {
-                        name: 'Termostato',
-                        defaultNames: [
-                            'calefaccion',
-                            'caldera',
-                            'estufa'
-                        ],
-                        nicknames: ['Calefacción']
-                    },
-                    willReportState: true,
-                    roomHint: 'Laboratorio',
-                    attributes: {
-                        //availableThermostatModes: ['off','heat','on'],
-                        availableThermostatModes: ["off", "heat", "cool", "on", "heatcool", "auto"],
-                        thermostatTemperatureRange: {
-                            minThresholdCelsius: '10',
-                            maxThresholdCelsius: '40'
-                        },
-                        thermostatTemperatureUnit: 'C',
-                        bufferRangeCelsius: 0.5,
-                        commandOnlyTemperatureSetting: false,
-                        queryOnlyTemperatureSetting: false
-                    },
-                    deviceInfo: {
-                        manufacturer: 'lopez-tola',
-                        model: 'Termostatix',
-                        hwVersion: '1.0',
-                        swVersion: '2.5'
-                    },
-                },
-                {
-                    id: "Enchufe",
-                    type: "action.devices.types.OUTLET",
-                    roomHint: 'Laboratorio',
-                    traits: [
-                        "action.devices.traits.OnOff"
-                    ],
-                    name: {
-                        name: "Enchufe de prueba",
-                        defaultNames: [],
-                        nicknames: []
-                    },
-                    willReportState: true,
-                    deviceInfo: {
-                        manufacturer: 'lopez-tola',
-                        model: 'smartEnchufe',
-                        hwVersion: '1.0',
-                        swVersion: '2.5'
-                    },
-                }],
-        },
+            devices: devices_syn
+        }
     };
     console.log(salida);
     return salida;
 });
 const queryDevice = (deviceId) => __awaiter(this, void 0, void 0, function* () {
-    console.log('queryDevice:' + deviceId);
+    console.log('queryDevice:' + deviceId + '------------------------------------------------');
     if (deviceId === 'Termostato') {
         return {
             status: "SUCCESS",
             online: true,
+            activeThermostatMode: modo,
             thermostatMode: modo,
             thermostatTemperatureSetpoint: setPoint,
             thermostatTemperatureAmbient: 25.1,
-            thermostatHumidityAmbient: 45.3
+            thermostatHumidityAmbient: 45.3,
         };
     }
     else if (deviceId === 'Enchufe') {
@@ -153,19 +99,25 @@ const queryDevice = (deviceId) => __awaiter(this, void 0, void 0, function* () {
             on: enchufe
         };
     }
+    else if (deviceId === 'Puerta') {
+        return {
+            status: "SUCCESS",
+            online: true,
+            openPercent: puertaAbierta,
+            isLocked: puertaBloqueada,
+            isJammed: false
+        };
+    }
     else {
+        console.log('device ID no reconocido: ' + deviceId);
         return {};
     }
 });
-/////////////////
 app.onQuery((body) => __awaiter(this, void 0, void 0, function* () {
     console.log('OnQuery activado');
-    console.log(body);
+    //console.log(body);
     const { requestId } = body;
-    //  const payload = {
-    //    devices: {},
-    //  };
-    const deviceStates = {}; /////////////////
+    const deviceStates = {};
     const queryPromises = [];
     const intent = body.inputs[0];
     for (const device of intent.payload.devices) {
@@ -173,20 +125,19 @@ app.onQuery((body) => __awaiter(this, void 0, void 0, function* () {
         queryPromises.push(queryDevice(device.id)
             .then((data) => {
             // Add response to device payload
-            deviceStates[device.id] = data; /////////////////
-            //payload.devices[device.id] = data;
+            deviceStates[device.id] = data;
         }));
     }
     // Wait for all promises to resolve
     yield Promise.all(queryPromises);
     const payload = {
         devices: deviceStates,
-    }; //////////
+    };
     const salida = {
         requestId: requestId,
         payload: payload,
     };
-    console.log(salida);
+    console.log(JSON.stringify(salida));
     return salida;
 }));
 const peticionHTTP = (mi_url) => __awaiter(this, void 0, void 0, function* () {
@@ -200,14 +151,15 @@ const peticionHTTP = (mi_url) => __awaiter(this, void 0, void 0, function* () {
 const updateDevice = (execution, deviceId) => __awaiter(this, void 0, void 0, function* () {
     console.log(`deviceId : ${deviceId}`);
     const { params, command } = execution;
+    if (typeof params === 'undefined')
+        return '';
     console.log(params);
     console.log('command: ' + command);
     let state;
     let url_accion;
     switch (command) {
         case 'action.devices.commands.ThermostatTemperatureSetpoint':
-            if (params.hasOwnProperty('thermostatTemperatureSetpoint'))
-                setPoint = params.thermostatTemperatureSetpoint;
+            setPoint = params.thermostatTemperatureSetpoint;
             state = { thermostatTemperatureSetpoint: setPoint };
             break;
         case 'action.devices.commands.ThermostatSetMode':
@@ -215,7 +167,6 @@ const updateDevice = (execution, deviceId) => __awaiter(this, void 0, void 0, fu
             state = { thermostatMode: modo };
             break;
         case 'action.devices.commands.OnOff':
-            console.log('aqui hemos llegado');
             enchufe = params.on;
             if (params.on === true) {
                 console.log('Pongo la url de encender');
@@ -230,7 +181,38 @@ const updateDevice = (execution, deviceId) => __awaiter(this, void 0, void 0, fu
                 console.log('Codigo de salida: ' + salida);
             });
             state = { on: enchufe };
-            console.log('Y aqui!!!');
+            break;
+        case 'action.devices.commands.OpenClose':
+            puertaAbierta = params.openPercent;
+            if (puertaAbierta != 0) {
+                console.log('Pongo la url de encender');
+                url_accion = 'https://domoticae.lopeztola.com/bombilla/activaRele?id=0';
+            }
+            else {
+                console.log('Pongo la url de apagar');
+                url_accion = 'https://domoticae.lopeztola.com/bombilla/desactivaRele?id=0';
+            }
+            console.log('se invocara: ' + url_accion);
+            peticionHTTP(url_accion).then((salida) => {
+                console.log('Codigo de salida: ' + salida);
+            });
+            state = { openPercent: (puertaAbierta > 0 ? 100 : 0) };
+            break;
+        case 'action.devices.commands.LockUnlock':
+            puertaBloqueada = params.Lock;
+            if (puertaBloqueada === true) {
+                console.log('Pongo la url de encender');
+                url_accion = 'https://domoticae.lopeztola.com/bombilla/activaRele?id=0';
+            }
+            else {
+                console.log('Pongo la url de apagar');
+                url_accion = 'https://domoticae.lopeztola.com/bombilla/desactivaRele?id=0';
+            }
+            console.log('se invocara: ' + url_accion);
+            peticionHTTP(url_accion).then((salida) => {
+                console.log('Codigo de salida: ' + salida);
+            });
+            state = { isLocked: puertaBloqueada };
             break;
         default:
             console.log(`comando no encontrado ${command}`);
@@ -279,55 +261,49 @@ app.onExecute((body) => __awaiter(this, void 0, void 0, function* () {
 app.onDisconnect((body, headers) => __awaiter(this, void 0, void 0, function* () {
     console.log('Se ha recibido DISCONNECT');
 }));
-////////////////////////////////////////////////////////////////////FULFILLMENT///////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////FIN - FULFILLMENT///////////////////////////////////////////////////////////////
 expressApp.post('/smarthome', app);
-/*
-expressApp.post('/smarthome/update', async (req, res) => {
-  console.log(req.body)
-  const {userId, deviceId, name, nickname, states, localDeviceId, errorCode, tfa} = req.body
-  try {
-    await Firestore.updateDevice(userId, deviceId, name, nickname, states, localDeviceId,
-      errorCode, tfa)
-    if (localDeviceId || localDeviceId === null) {
-      await app.requestSync(userId)
+////////////////////////////////////////////////////////////////////LLAMADAS SALIENTE///////////////////////////////////////////////////////////////
+expressApp.all('/smarthome/resincroniza', (req, res) => __awaiter(this, void 0, void 0, function* () {
+    try {
+        yield app.requestSync(Config.USER_ID);
+        res.status(200).send('Resincronizacion solicitada');
     }
-    if (states !== undefined) {
-      const res = await reportState(userId, deviceId, states)
-      console.log('device state reported:', states, res)
+    catch (e) {
+        console.error(e);
+        res.status(200).send('Error en la resincronizacion');
     }
-    res.status(200).send('OK')
-  } catch(e) {
-    console.error(e)
-    res.status(400).send(`Error updating device: ${e}`)
-  }
-})
-
-expressApp.post('/smarthome/create', async (req, res) => {
-  console.log(req.body)
-  const {userId, data} = req.body
-  try {
-    await Firestore.addDevice(userId, data)
-    await app.requestSync(userId)
-  } catch(e) {
-    console.error(e)
-  } finally {
-    res.status(200).send('OK')
-  }
-})
-
-expressApp.post('/smarthome/delete', async (req, res) => {
-  console.log(req.body)
-  const {userId, deviceId} = req.body
-  try {
-    await Firestore.deleteDevice(userId, deviceId)
-    await app.requestSync(userId)
-  } catch(e) {
-    console.error(e)
-  } finally {
-    res.status(200).send('OK')
-  }
-})
-*/
+}));
+expressApp.all('/smarthome/reportaCambio', (req, res) => __awaiter(this, void 0, void 0, function* () {
+    const userId = Config.USER_ID;
+    const deviceId = req.body.deviceId;
+    const states = {};
+    try {
+        yield reportState(userId, deviceId, states);
+        res.status(200).send('Cambio enviado');
+    }
+    catch (e) {
+        console.error(e);
+        res.status(200).send('Error al enviar cambio');
+    }
+}));
+function reportState(agentUserId, deviceId, states) {
+    return __awaiter(this, void 0, void 0, function* () {
+        console.log(`Reporting state payload for ${deviceId}`, states);
+        return yield app.reportState({
+            agentUserId,
+            requestId: Math.random().toString(),
+            payload: {
+                devices: {
+                    states: {
+                        [deviceId]: states,
+                    },
+                },
+            },
+        });
+    });
+}
+////////////////////////////////////////////////////////////////////FIN - LLAMADAS SALIENTE///////////////////////////////////////////////////////////////
 const appPort = process.env.PORT || Config.expressPort;
 const expressServer = expressApp.listen(appPort, () => __awaiter(this, void 0, void 0, function* () {
     const server = expressServer.address();
@@ -346,10 +322,10 @@ const expressServer = expressApp.listen(appPort, () => __awaiter(this, void 0, v
             console.log('    ' + url + '/smarthome');
             console.log('');
             console.log('In the console, set the Authorization URL to:');
-            console.log('    ' + url + '/fakeauth');
+            console.log('    ' + url + '/trueauth');
             console.log('');
             console.log('Then set the Token URL to:');
-            console.log('    ' + url + '/faketoken');
+            console.log('    ' + url + '/truetoken');
             console.log('');
             console.log('Finally press the \'TEST DRAFT\' button');
         }

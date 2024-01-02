@@ -5,7 +5,6 @@ export declare const expressPort = 8888;
 export declare const googleClientId = "ABC123";
 export declare const googleClientSecret = "DEF456";
 export declare const useNgrok = false;
-export declare const googleCloudProjectId = "abracadabra-2c873";
 export declare const UNA_HORA = 3600;
 export declare const UN_DIA = 86400;
 export declare const USER_ID = "user@login.com";
